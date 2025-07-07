@@ -2,16 +2,19 @@ import React, { useState, useEffect, useCallback } from "react";
 import WindowManager from "./desktop/WindowManager";
 import Taskbar from "./desktop/Taskbar";
 import ApplicationLoader from "./applications/ApplicationLoader";
+import LoginForm from "./auth/LoginForm";
+import SignupForm from "./auth/SignupForm";
 import { motion } from "framer-motion";
 import { useWindowStore } from "@/store/windowStore";
 import { useDesktopStore } from "@/store/desktopStore";
 import { useFileSystemStore } from "@/store/fileSystemStore";
-import { Folder, FileText, Terminal, Bot } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
+import { Folder, FileText, Terminal, Bot, Globe } from "lucide-react";
 
 const Home = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
 
   // Store hooks
   const {
@@ -30,24 +33,14 @@ const Home = () => {
     wallpaper,
     icons,
     selectedIcons,
+    recentApps,
     updateIconPosition,
     setSelectedIcons,
+    addRecentApp,
   } = useDesktopStore();
 
   const { setCurrentPath } = useFileSystemStore();
-
-  // Simulate authentication check
-  useEffect(() => {
-    // For demo purposes, we'll just set authenticated to true
-    // In a real app, you would check for a valid session/token
-    const checkAuth = () => {
-      setTimeout(() => {
-        setIsAuthenticated(true);
-      }, 1000);
-    };
-
-    checkAuth();
-  }, []);
+  const { user, isAuthenticated, logout } = useAuthStore();
 
   const launchApplication = useCallback(
     (appType: string, data?: any) => {
@@ -65,9 +58,17 @@ const Home = () => {
         data,
       });
 
+      // Add to recent apps
+      addRecentApp({
+        id: windowId,
+        name: getAppTitle(appType),
+        appType,
+        icon: getAppIcon(appType),
+      });
+
       return windowId;
     },
-    [windows.length, createWindow],
+    [windows.length, createWindow, addRecentApp],
   );
 
   const getAppTitle = (appType: string): string => {
@@ -80,6 +81,10 @@ const Home = () => {
         return "Terminal";
       case "aiAssistant":
         return "AI Assistant";
+      case "profileSettings":
+        return "Settings";
+      case "browser":
+        return "Browser";
       default:
         return "Application";
     }
@@ -97,6 +102,10 @@ const Home = () => {
         return { width: 650, height: 400 };
       case "aiAssistant":
         return { width: 600, height: 500 };
+      case "profileSettings":
+        return { width: 800, height: 600 };
+      case "browser":
+        return { width: 900, height: 650 };
       default:
         return { width: 700, height: 500 };
     }
@@ -156,14 +165,11 @@ const Home = () => {
   }, [isDragging, dragOffset, updateIconPosition]);
 
   if (!isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center h-screen w-screen bg-gray-900">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-white">Loading WebOS...</h2>
-        </div>
-      </div>
-    );
+    if (authMode === "login") {
+      return <LoginForm onSwitchToSignup={() => setAuthMode("signup")} />;
+    } else {
+      return <SignupForm onSwitchToLogin={() => setAuthMode("login")} />;
+    }
   }
 
   const getAppIcon = (appType: string): string => {
@@ -176,6 +182,8 @@ const Home = () => {
         return "terminal";
       case "aiAssistant":
         return "bot";
+      case "browser":
+        return "globe";
       default:
         return "app-window";
     }
@@ -246,6 +254,7 @@ const Home = () => {
           icon: getAppIcon(window.appType),
           isMinimized: window.isMinimized,
         }))}
+        recentApps={recentApps}
         onApplicationClick={(id) => {
           const window = windows.find((w) => w.id === id);
           if (window?.isMinimized) {
@@ -255,7 +264,10 @@ const Home = () => {
           }
         }}
         onStartMenuClick={() => {}}
-        onLogout={() => setIsAuthenticated(false)}
+        onLogout={logout}
+        onOpenProfile={() => launchApplication("profileSettings")}
+        onOpenSettings={() => launchApplication("profileSettings")}
+        onRecentAppClick={(appType) => launchApplication(appType)}
         onSearchApp={(appName) => {
           const lowerAppName = appName.toLowerCase();
           let appType = "";
@@ -280,13 +292,18 @@ const Home = () => {
             lowerAppName.includes("assistant")
           ) {
             appType = "aiAssistant";
+          } else if (
+            lowerAppName.includes("browser") ||
+            lowerAppName.includes("web")
+          ) {
+            appType = "browser";
           }
 
           if (appType) {
             launchApplication(appType);
           }
         }}
-        username="User"
+        username={user?.firstName || "User"}
       />
     </div>
   );
@@ -323,6 +340,8 @@ const DesktopIcon: React.FC<DesktopIconProps> = ({
         return Terminal;
       case "bot":
         return Bot;
+      case "globe":
+        return Globe;
       default:
         return Folder;
     }

@@ -13,6 +13,13 @@ interface DesktopState {
   wallpaper: string;
   icons: DesktopIcon[];
   selectedIcons: string[];
+  recentApps: Array<{
+    id: string;
+    name: string;
+    appType: string;
+    icon: string;
+    lastUsed: Date;
+  }>;
 
   // Actions
   setWallpaper: (url: string) => void;
@@ -20,6 +27,12 @@ interface DesktopState {
   setSelectedIcons: (ids: string[]) => void;
   addIcon: (icon: Omit<DesktopIcon, "id">) => void;
   removeIcon: (id: string) => void;
+  addRecentApp: (app: {
+    id: string;
+    name: string;
+    appType: string;
+    icon: string;
+  }) => void;
 }
 
 const defaultIcons: DesktopIcon[] = [
@@ -51,6 +64,13 @@ const defaultIcons: DesktopIcon[] = [
     position: { x: 50, y: 350 },
     icon: "bot",
   },
+  {
+    id: "browser",
+    name: "Browser",
+    appType: "browser",
+    position: { x: 50, y: 450 },
+    icon: "globe",
+  },
 ];
 
 export const useDesktopStore = create<DesktopState>()(
@@ -60,6 +80,7 @@ export const useDesktopStore = create<DesktopState>()(
         "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1920&q=80",
       icons: defaultIcons,
       selectedIcons: [],
+      recentApps: [],
 
       setWallpaper: (url) => set({ wallpaper: url }),
 
@@ -87,6 +108,30 @@ export const useDesktopStore = create<DesktopState>()(
             (selectedId) => selectedId !== id,
           ),
         }));
+      },
+
+      addRecentApp: (app) => {
+        set((state) => {
+          const existingIndex = state.recentApps.findIndex(
+            (recent) => recent.appType === app.appType,
+          );
+          let newRecentApps = [...state.recentApps];
+
+          if (existingIndex !== -1) {
+            // Update existing app's last used time
+            newRecentApps[existingIndex] = { ...app, lastUsed: new Date() };
+          } else {
+            // Add new app
+            newRecentApps.unshift({ ...app, lastUsed: new Date() });
+          }
+
+          // Keep only the 5 most recent apps
+          newRecentApps = newRecentApps
+            .sort((a, b) => b.lastUsed.getTime() - a.lastUsed.getTime())
+            .slice(0, 5);
+
+          return { recentApps: newRecentApps };
+        });
       },
     }),
     {

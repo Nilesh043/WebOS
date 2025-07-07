@@ -27,11 +27,18 @@ import {
   Bot,
   Send,
 } from "lucide-react";
+import ProfileSettings from "../auth/ProfileSettings";
 import { useFileSystemStore } from "@/store/fileSystemStore";
 import { useWindowStore } from "@/store/windowStore";
 
 interface ApplicationLoaderProps {
-  appType: "fileExplorer" | "textEditor" | "terminal" | "aiAssistant";
+  appType:
+    | "fileExplorer"
+    | "textEditor"
+    | "terminal"
+    | "aiAssistant"
+    | "profileSettings"
+    | "browser";
   appTitle?: string;
   windowId?: string;
   data?: any;
@@ -567,6 +574,61 @@ const ApplicationLoader = ({
               <Button onClick={handleAiSubmit} disabled={!aiInput.trim()}>
                 <Send className="h-4 w-4" />
               </Button>
+            </div>
+          </div>
+        );
+
+      case "profileSettings":
+        return (
+          <div className="w-full h-full bg-white">
+            <ProfileSettings onClose={onClose} />
+          </div>
+        );
+
+      case "browser":
+        return (
+          <div className="h-full flex flex-col bg-white">
+            <div className="flex items-center p-2 border-b bg-gray-50">
+              <div className="flex items-center space-x-2 flex-1">
+                <div className="flex space-x-1">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+                <div className="flex-1 mx-4">
+                  <div className="bg-white border rounded-md px-3 py-1 text-sm text-gray-600">
+                    https://www.example.com
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 bg-white flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-4">🌐</div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                  WebOS Browser
+                </h2>
+                <p className="text-gray-600">A simple web browser interface</p>
+                <div className="mt-6 space-y-2">
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <h3 className="font-medium text-blue-800">Quick Links</h3>
+                    <div className="mt-2 space-x-4 text-sm">
+                      <a href="#" className="text-blue-600 hover:underline">
+                        Search
+                      </a>
+                      <a href="#" className="text-blue-600 hover:underline">
+                        News
+                      </a>
+                      <a href="#" className="text-blue-600 hover:underline">
+                        Weather
+                      </a>
+                      <a href="#" className="text-blue-600 hover:underline">
+                        Mail
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );

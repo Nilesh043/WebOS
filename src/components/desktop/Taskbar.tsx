@@ -17,6 +17,8 @@ import {
   Menu,
   X,
   Search,
+  Grid3X3,
+  Calendar,
 } from "lucide-react";
 
 interface TaskbarProps {
@@ -26,24 +28,39 @@ interface TaskbarProps {
     icon?: string;
     isMinimized?: boolean;
   }>;
+  recentApps?: Array<{
+    id: string;
+    name: string;
+    appType: string;
+    icon: string;
+    lastUsed: Date;
+  }>;
   onApplicationClick?: (id: string) => void;
   onStartMenuClick?: () => void;
   onLogout?: () => void;
   onSearchApp?: (appName: string) => void;
+  onOpenProfile?: () => void;
+  onOpenSettings?: () => void;
+  onRecentAppClick?: (appType: string) => void;
   username?: string;
 }
 
 const Taskbar = ({
   openApplications = [],
+  recentApps = [],
   onApplicationClick = () => {},
   onStartMenuClick = () => {},
   onLogout = () => {},
   onSearchApp = () => {},
+  onOpenProfile = () => {},
+  onOpenSettings = () => {},
+  onRecentAppClick = () => {},
   username = "User",
 }: TaskbarProps) => {
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState("");
+  const [showRecentApps, setShowRecentApps] = useState(false);
 
   // Update time every minute
   React.useEffect(() => {
@@ -57,6 +74,28 @@ const Taskbar = ({
     hour: "2-digit",
     minute: "2-digit",
   });
+
+  const formattedDate = currentTime.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+  });
+
+  const getRecentAppIcon = (iconName: string) => {
+    switch (iconName) {
+      case "folder":
+        return "📁";
+      case "file-text":
+        return "📝";
+      case "terminal":
+        return "💻";
+      case "bot":
+        return "🤖";
+      case "globe":
+        return "🌐";
+      default:
+        return "📱";
+    }
+  };
 
   const handleStartMenuToggle = () => {
     setIsStartMenuOpen(!isStartMenuOpen);
@@ -75,14 +114,91 @@ const Taskbar = ({
     <div className="fixed bottom-0 left-0 right-0 h-12 bg-background border-t border-border flex items-center justify-between px-2 z-50">
       {/* Start Menu Button */}
       <div className="flex items-center">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 rounded-full hover:bg-accent"
-          onClick={handleStartMenuToggle}
-        >
-          {isStartMenuOpen ? <X size={20} /> : <Menu size={20} />}
-        </Button>
+        <Popover open={isStartMenuOpen} onOpenChange={setIsStartMenuOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-full hover:bg-accent"
+              onClick={handleStartMenuToggle}
+            >
+              <Grid3X3 size={20} />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-4" align="start" side="top">
+            <div className="space-y-4">
+              <div className="text-lg font-semibold">Applications</div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="ghost"
+                  className="h-16 flex flex-col items-center justify-center space-y-1"
+                  onClick={() => {
+                    onSearchApp("file explorer");
+                    setIsStartMenuOpen(false);
+                  }}
+                >
+                  <span className="text-2xl">📁</span>
+                  <span className="text-xs">File Explorer</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="h-16 flex flex-col items-center justify-center space-y-1"
+                  onClick={() => {
+                    onSearchApp("text editor");
+                    setIsStartMenuOpen(false);
+                  }}
+                >
+                  <span className="text-2xl">📝</span>
+                  <span className="text-xs">Text Editor</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="h-16 flex flex-col items-center justify-center space-y-1"
+                  onClick={() => {
+                    onSearchApp("terminal");
+                    setIsStartMenuOpen(false);
+                  }}
+                >
+                  <span className="text-2xl">💻</span>
+                  <span className="text-xs">Terminal</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="h-16 flex flex-col items-center justify-center space-y-1"
+                  onClick={() => {
+                    onSearchApp("browser");
+                    setIsStartMenuOpen(false);
+                  }}
+                >
+                  <span className="text-2xl">🌐</span>
+                  <span className="text-xs">Browser</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="h-16 flex flex-col items-center justify-center space-y-1"
+                  onClick={() => {
+                    onSearchApp("ai assistant");
+                    setIsStartMenuOpen(false);
+                  }}
+                >
+                  <span className="text-2xl">🤖</span>
+                  <span className="text-xs">AI Assistant</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="h-16 flex flex-col items-center justify-center space-y-1"
+                  onClick={() => {
+                    onOpenSettings();
+                    setIsStartMenuOpen(false);
+                  }}
+                >
+                  <span className="text-2xl">⚙️</span>
+                  <span className="text-xs">Settings</span>
+                </Button>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
 
         {/* Open Applications */}
         <div className="flex items-center ml-2 space-x-1">
@@ -126,9 +242,57 @@ const Taskbar = ({
         </form>
       </div>
 
+      {/* Recent Apps */}
+      {recentApps.length > 0 && (
+        <div className="flex items-center space-x-2 ml-4">
+          <Separator orientation="vertical" className="h-6" />
+          <div className="text-xs text-muted-foreground">Recent:</div>
+          {recentApps.slice(0, 4).map((app) => (
+            <Button
+              key={app.id}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 flex items-center justify-center"
+              onClick={() => onRecentAppClick(app.appType)}
+              title={app.name}
+            >
+              <span className="text-sm">{getRecentAppIcon(app.icon)}</span>
+            </Button>
+          ))}
+        </div>
+      )}
+
       {/* System Tray */}
       <div className="flex items-center space-x-2">
-        <div className="text-sm text-muted-foreground">{formattedTime}</div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 flex flex-col items-center justify-center px-2"
+            >
+              <Clock size={14} />
+              <div className="text-xs leading-none">{formattedTime}</div>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-4" align="end" side="top">
+            <div className="text-center space-y-2">
+              <div className="text-2xl font-bold">{formattedTime}</div>
+              <div className="text-lg text-muted-foreground">
+                {formattedDate}
+              </div>
+              <Separator className="my-3" />
+              <div className="text-sm text-muted-foreground">
+                {currentTime.toLocaleDateString([], {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
 
         <Separator orientation="vertical" className="h-6" />
 
@@ -161,11 +325,21 @@ const Taskbar = ({
             </div>
             <Separator className="my-2" />
             <div className="grid gap-1">
-              <Button variant="ghost" size="sm" className="justify-start">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start"
+                onClick={onOpenProfile}
+              >
                 <User size={16} className="mr-2" />
                 Profile
               </Button>
-              <Button variant="ghost" size="sm" className="justify-start">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start"
+                onClick={onOpenSettings}
+              >
                 <Settings size={16} className="mr-2" />
                 Settings
               </Button>
@@ -181,10 +355,6 @@ const Taskbar = ({
             </div>
           </PopoverContent>
         </Popover>
-
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Clock size={16} />
-        </Button>
       </div>
     </div>
   );

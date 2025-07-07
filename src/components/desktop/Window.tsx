@@ -43,8 +43,10 @@ const Window: React.FC<WindowProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [prevSize, setPrevSize] = useState(size);
-  const [prevPosition, setPrevPosition] = useState(position);
+  const [prevSize, setPrevSize] = useState(size || { width: 600, height: 400 });
+  const [prevPosition, setPrevPosition] = useState(
+    position || { x: 100, y: 100 },
+  );
 
   const windowRef = useRef<HTMLDivElement>(null);
   const resizeStartPos = useRef({ x: 0, y: 0 });
@@ -60,7 +62,7 @@ const Window: React.FC<WindowProps> = ({
   // Start dragging the window
   const handleDragStart = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isMaximized) return;
+    if (isMaximized || !position) return;
 
     setIsDragging(true);
     setDragOffset({
@@ -86,13 +88,13 @@ const Window: React.FC<WindowProps> = ({
   // Handle mouse move for dragging and resizing
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging) {
+      if (isDragging && position) {
         const newPosition = {
           x: e.clientX - dragOffset.x,
           y: Math.max(0, e.clientY - dragOffset.y), // Prevent dragging above the top of the screen
         };
         onPositionChange(newPosition);
-      } else if (isResizing && resizeDirection) {
+      } else if (isResizing && resizeDirection && size && position) {
         const deltaX = e.clientX - resizeStartPos.current.x;
         const deltaY = e.clientY - resizeStartPos.current.y;
 
@@ -116,7 +118,6 @@ const Window: React.FC<WindowProps> = ({
         }
         if (resizeDirection.includes("n")) {
           newHeight = Math.max(minSize.height, size.height - deltaY);
-          newY = position.y + deltaY;
         }
 
         onSizeChange({ width: newWidth, height: newHeight });
@@ -153,6 +154,8 @@ const Window: React.FC<WindowProps> = ({
 
   // Handle window maximization
   useEffect(() => {
+    if (!size || !position) return;
+
     if (isMaximized) {
       // Save current size and position before maximizing
       if (
@@ -183,7 +186,7 @@ const Window: React.FC<WindowProps> = ({
       onSizeChange(prevSize);
       onPositionChange(prevPosition);
     }
-  }, [isMaximized, onSizeChange, onPositionChange]);
+  }, [isMaximized, onSizeChange, onPositionChange, size, position]);
 
   // Handle window visibility
   if (isMinimized) {
@@ -199,9 +202,9 @@ const Window: React.FC<WindowProps> = ({
         isDragging && "opacity-80 cursor-move",
       )}
       style={{
-        width: `${size.width}px`,
-        height: `${size.height}px`,
-        transform: `translate(${position.x}px, ${position.y}px)`,
+        width: `${size?.width || 600}px`,
+        height: `${size?.height || 400}px`,
+        transform: `translate(${position?.x || 0}px, ${position?.y || 0}px)`,
         zIndex,
       }}
       onClick={handleWindowClick}
