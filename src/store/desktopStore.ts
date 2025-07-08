@@ -71,6 +71,13 @@ const defaultIcons: DesktopIcon[] = [
     position: { x: 50, y: 450 },
     icon: "globe",
   },
+  {
+    id: "recycle-bin",
+    name: "Recycle Bin",
+    appType: "recycleBin",
+    position: { x: 50, y: 550 },
+    icon: "trash",
+  },
 ];
 
 export const useDesktopStore = create<DesktopState>()(

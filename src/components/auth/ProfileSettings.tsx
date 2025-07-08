@@ -64,8 +64,8 @@ const ProfileSettings = ({ onClose = () => {} }: ProfileSettingsProps) => {
   if (!user) return null;
 
   return (
-    <div className="w-full h-full bg-white min-h-screen">
-      <div className="flex flex-col h-full min-h-screen">
+    <div className="w-full h-full bg-white">
+      <div className="flex flex-col h-full">
         <div className="flex items-center justify-between p-4 border-b bg-white">
           <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
           <Button variant="outline" size="sm" onClick={onClose}>
@@ -81,7 +81,7 @@ const ProfileSettings = ({ onClose = () => {} }: ProfileSettingsProps) => {
           </div>
         )}
 
-        <div className="flex-1 p-4 bg-white overflow-auto">
+        <div className="flex-1 p-4 bg-white overflow-auto max-h-[calc(100vh-120px)]">
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}

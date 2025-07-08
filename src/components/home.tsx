@@ -9,7 +9,7 @@ import { useWindowStore } from "@/store/windowStore";
 import { useDesktopStore } from "@/store/desktopStore";
 import { useFileSystemStore } from "@/store/fileSystemStore";
 import { useAuthStore } from "@/store/authStore";
-import { Folder, FileText, Terminal, Bot, Globe } from "lucide-react";
+import { Folder, FileText, Terminal, Bot, Globe, Trash2 } from "lucide-react";
 
 const Home = () => {
   const [isDragging, setIsDragging] = useState<string | null>(null);
@@ -85,6 +85,8 @@ const Home = () => {
         return "Settings";
       case "browser":
         return "Browser";
+      case "recycleBin":
+        return "Recycle Bin";
       default:
         return "Application";
     }
@@ -106,6 +108,8 @@ const Home = () => {
         return { width: 800, height: 600 };
       case "browser":
         return { width: 900, height: 650 };
+      case "recycleBin":
+        return { width: 800, height: 600 };
       default:
         return { width: 700, height: 500 };
     }
@@ -184,6 +188,8 @@ const Home = () => {
         return "bot";
       case "browser":
         return "globe";
+      case "recycleBin":
+        return "trash";
       default:
         return "app-window";
     }
@@ -297,6 +303,12 @@ const Home = () => {
             lowerAppName.includes("web")
           ) {
             appType = "browser";
+          } else if (
+            lowerAppName.includes("recycle") ||
+            lowerAppName.includes("trash") ||
+            lowerAppName.includes("bin")
+          ) {
+            appType = "recycleBin";
           }
 
           if (appType) {
@@ -342,6 +354,8 @@ const DesktopIcon: React.FC<DesktopIconProps> = ({
         return Bot;
       case "globe":
         return Globe;
+      case "trash":
+        return Trash2;
       default:
         return Folder;
     }

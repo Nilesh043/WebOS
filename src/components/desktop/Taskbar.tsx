@@ -195,6 +195,17 @@ const Taskbar = ({
                   <span className="text-2xl">⚙️</span>
                   <span className="text-xs">Settings</span>
                 </Button>
+                <Button
+                  variant="ghost"
+                  className="h-16 flex flex-col items-center justify-center space-y-1"
+                  onClick={() => {
+                    onSearchApp("recycle bin");
+                    setIsStartMenuOpen(false);
+                  }}
+                >
+                  <span className="text-2xl">🗑️</span>
+                  <span className="text-xs">Recycle Bin</span>
+                </Button>
               </div>
             </div>
           </PopoverContent>

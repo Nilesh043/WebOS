@@ -23,13 +23,28 @@ import {
   Trash2,
   Plus,
   ArrowLeft,
+  ArrowRight,
   Home,
   Bot,
   Send,
+  RotateCcw,
+  Maximize,
+  Search,
+  ExternalLink,
+  Star,
+  History,
+  Download,
+  Settings,
+  MoreHorizontal,
+  X,
+  Shield,
+  Lock,
+  Globe,
 } from "lucide-react";
 import ProfileSettings from "../auth/ProfileSettings";
 import { useFileSystemStore } from "@/store/fileSystemStore";
 import { useWindowStore } from "@/store/windowStore";
+import { useRecycleBinStore } from "@/store/recycleBinStore";
 
 interface ApplicationLoaderProps {
   appType:
@@ -38,7 +53,8 @@ interface ApplicationLoaderProps {
     | "terminal"
     | "aiAssistant"
     | "profileSettings"
-    | "browser";
+    | "browser"
+    | "recycleBin";
   appTitle?: string;
   windowId?: string;
   data?: any;
@@ -69,7 +85,15 @@ const ApplicationLoader = ({
   } = useFileSystemStore();
 
   // Window store
-  const { updateWindowData, createWindow } = useWindowStore();
+  const { updateWindowData, createWindow, maximizeWindow } = useWindowStore();
+
+  // Recycle bin store
+  const {
+    items: recycleBinItems,
+    restoreItem,
+    permanentlyDelete,
+    emptyRecycleBin,
+  } = useRecycleBinStore();
 
   // Local state
   const [fileContent, setFileContent] = useState<string>("");
@@ -88,6 +112,30 @@ const ApplicationLoader = ({
         'Hello! I\'m your AI assistant. I can help you with file operations, opening applications, and answering questions. Try commands like:\n\n• "Open text editor"\n• "Create a folder named Projects"\n• "Show me the files in Documents"\n• "What can you do?"',
     },
   ]);
+  const [browserUrl, setBrowserUrl] = useState("https://www.google.com");
+  const [browserContent, setBrowserContent] = useState("");
+  const [browserHistory, setBrowserHistory] = useState<string[]>([
+    "https://www.google.com",
+  ]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const [bookmarks, setBookmarks] = useState<
+    Array<{ id: string; title: string; url: string }>
+  >([]);
+  const [tabs, setTabs] = useState<
+    Array<{ id: string; title: string; url: string; isActive: boolean }>
+  >([
+    {
+      id: "1",
+      title: "New Tab",
+      url: "https://www.google.com",
+      isActive: true,
+    },
+  ]);
+  const [activeTabId, setActiveTabId] = useState("1");
+  const [showBookmarks, setShowBookmarks] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showDownloads, setShowDownloads] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const terminalRef = useRef<HTMLDivElement>(null);
 
@@ -108,6 +156,191 @@ const ApplicationLoader = ({
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
   }, [terminalOutput]);
+
+  // Initialize browser content on first load
+  useEffect(() => {
+    if (appType === "browser" && !browserContent) {
+      handleBrowserNavigation("https://www.google.com", false);
+    }
+  }, [appType, browserContent]);
+
+  // Handle browser navigation
+  const handleBrowserNavigation = (url: string, addToHistory = true) => {
+    let processedUrl = url;
+
+    // Add https:// if no protocol is specified
+    if (
+      !processedUrl.startsWith("http://") &&
+      !processedUrl.startsWith("https://")
+    ) {
+      processedUrl = "https://" + processedUrl;
+    }
+
+    setIsLoading(true);
+    setBrowserUrl(processedUrl);
+
+    // Update active tab
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.id === activeTabId
+          ? {
+              ...tab,
+              url: processedUrl,
+              title: getPageTitle(processedUrl),
+            }
+          : tab,
+      ),
+    );
+
+    // Add to history if it's a new navigation
+    if (addToHistory && processedUrl !== browserHistory[historyIndex]) {
+      const newHistory = browserHistory.slice(0, historyIndex + 1);
+      newHistory.push(processedUrl);
+      setBrowserHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
+    }
+
+    if (
+      processedUrl.includes("google.com") ||
+      processedUrl.includes("search")
+    ) {
+      setBrowserContent(`
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #4285f4; font-size: 48px; margin: 0;">Google</h1>
+            <div style="margin: 20px 0;">
+              <input type="text" placeholder="Search Google or type a URL" style="width: 400px; padding: 12px; border: 1px solid #ddd; border-radius: 24px; font-size: 16px;" />
+              <button style="margin-left: 10px; padding: 12px 24px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer;">Search</button>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; max-width: 800px; margin: 0 auto;">
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
+              <h3>Gmail</h3>
+              <p>Access your email</p>
+            </div>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
+              <h3>YouTube</h3>
+              <p>Watch videos</p>
+            </div>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
+              <h3>Maps</h3>
+              <p>Find locations</p>
+            </div>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center;">
+              <h3>Drive</h3>
+              <p>Cloud storage</p>
+            </div>
+          </div>
+        </div>
+      `);
+    } else if (processedUrl.includes("github.com")) {
+      setBrowserContent(`
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background: #0d1117; color: #c9d1d9; min-height: 100%;">
+          <div style="border-bottom: 1px solid #30363d; padding-bottom: 20px; margin-bottom: 20px;">
+            <h1 style="color: #f0f6fc; margin: 0;">🐙 GitHub</h1>
+            <p style="color: #8b949e;">Where the world builds software</p>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <div style="background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px;">
+              <h3 style="color: #58a6ff; margin-top: 0;">Popular Repositories</h3>
+              <ul style="list-style: none; padding: 0;">
+                <li style="margin: 8px 0;">📦 microsoft/vscode</li>
+                <li style="margin: 8px 0;">⚛️ facebook/react</li>
+                <li style="margin: 8px 0;">🟢 nodejs/node</li>
+              </ul>
+            </div>
+            <div style="background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px;">
+              <h3 style="color: #58a6ff; margin-top: 0;">Trending</h3>
+              <p style="color: #8b949e;">Discover what the GitHub community is most excited about today.</p>
+            </div>
+          </div>
+        </div>
+      `);
+    } else if (processedUrl.includes("youtube.com")) {
+      setBrowserContent(`
+        <div style="font-family: Arial, sans-serif; padding: 20px; background: #0f0f0f; color: white; min-height: 100%;">
+          <div style="display: flex; align-items: center; margin-bottom: 20px;">
+            <h1 style="color: #ff0000; margin: 0; font-size: 32px;">📺 YouTube</h1>
+            <div style="margin-left: 20px; flex: 1;">
+              <input type="text" placeholder="Search" style="width: 300px; padding: 8px; border: 1px solid #333; background: #121212; color: white; border-radius: 2px;" />
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
+            <div style="background: #1a1a1a; border-radius: 8px; padding: 12px;">
+              <div style="width: 100%; height: 180px; background: #333; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center;">📹</div>
+              <h3 style="margin: 8px 0; font-size: 14px;">Sample Video Title</h3>
+              <p style="color: #aaa; font-size: 12px;">Channel Name • 1M views</p>
+            </div>
+            <div style="background: #1a1a1a; border-radius: 8px; padding: 12px;">
+              <div style="width: 100%; height: 180px; background: #333; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center;">🎬</div>
+              <h3 style="margin: 8px 0; font-size: 14px;">Another Video Title</h3>
+              <p style="color: #aaa; font-size: 12px;">Creator • 500K views</p>
+            </div>
+          </div>
+        </div>
+      `);
+    } else if (
+      processedUrl.includes("twitter.com") ||
+      processedUrl.includes("x.com")
+    ) {
+      setBrowserContent(`
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background: #000; color: white; min-height: 100%;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #1d9bf0; font-size: 48px; margin: 0;">𝕏</h1>
+            <p style="color: #71767b;">What's happening?</p>
+          </div>
+          <div style="max-width: 600px; margin: 0 auto;">
+            <div style="background: #16181c; border: 1px solid #2f3336; border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+              <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <div style="width: 40px; height: 40px; background: #1d9bf0; border-radius: 50%; margin-right: 12px;"></div>
+                <div>
+                  <div style="font-weight: bold;">WebOS User</div>
+                  <div style="color: #71767b; font-size: 14px;">@webos_user</div>
+                </div>
+              </div>
+              <p>Welcome to the WebOS browser! This is a simulated social media experience.</p>
+            </div>
+          </div>
+        </div>
+      `);
+    } else {
+      setBrowserContent(`
+        <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+          <h2>WebOS Browser</h2>
+          <p>Simulated web content for: <strong>${processedUrl}</strong></p>
+          <div style="margin: 20px 0; padding: 20px; background: #f5f5f5; border-radius: 8px;">
+            <p>This is a demo browser showing simulated content for the URL you entered.</p>
+            <div style="margin: 20px 0; padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #4285f4;">
+              <h3 style="margin: 0 0 10px 0; color: #1a73e8;">Website: ${processedUrl}</h3>
+              <p style="margin: 0; color: #5f6368;">This would normally load the actual website content.</p>
+            </div>
+            <p><strong>Try these working examples:</strong></p>
+            <ul style="list-style: none; padding: 0;">
+              <li>• google.com</li>
+              <li>• github.com</li>
+              <li>• youtube.com</li>
+              <li>• twitter.com</li>
+            </ul>
+          </div>
+        </div>
+      `);
+    }
+
+    setTimeout(() => setIsLoading(false), 500);
+  };
+
+  const getPageTitle = (url: string) => {
+    if (url.includes("google.com")) return "Google";
+    if (url.includes("github.com")) return "GitHub";
+    if (url.includes("youtube.com")) return "YouTube";
+    if (url.includes("twitter.com") || url.includes("x.com"))
+      return "X (Twitter)";
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return "New Tab";
+    }
+  };
 
   // Handle terminal commands
   const handleTerminalCommand = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -580,55 +813,515 @@ const ApplicationLoader = ({
 
       case "profileSettings":
         return (
-          <div className="w-full h-full bg-white">
-            <ProfileSettings onClose={onClose} />
+          <div className="w-full h-full bg-white overflow-hidden">
+            <div className="w-full h-full">
+              <ProfileSettings onClose={onClose} />
+            </div>
+          </div>
+        );
+
+      case "recycleBin":
+        return (
+          <div className="h-full bg-white">
+            <div className="flex items-center justify-between p-2 border-b">
+              <div className="flex items-center space-x-2">
+                <Trash2 className="h-5 w-5" />
+                <span className="font-medium">Recycle Bin</span>
+                <span className="text-sm text-muted-foreground">
+                  ({recycleBinItems.length} items)
+                </span>
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (
+                      confirm(
+                        "Empty recycle bin? This action cannot be undone.",
+                      )
+                    ) {
+                      emptyRecycleBin();
+                    }
+                  }}
+                  disabled={recycleBinItems.length === 0}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" /> Empty Bin
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (windowId) {
+                      maximizeWindow(windowId);
+                    }
+                  }}
+                  title="Full Screen"
+                >
+                  <Maximize className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <ScrollArea className="h-[calc(100%-40px)]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Original Location</TableHead>
+                    <TableHead>Deleted</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recycleBinItems.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="flex items-center">
+                        {item.type === "folder" ? (
+                          <Folder className="h-4 w-4 mr-2" />
+                        ) : (
+                          <File className="h-4 w-4 mr-2" />
+                        )}
+                        <span>{item.name}</span>
+                      </TableCell>
+                      <TableCell>
+                        {item.type === "folder" ? "Folder" : "File"}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {item.originalPath}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(item.deletedAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const restoredItem = restoreItem(item.id);
+                              if (restoredItem) {
+                                // Note: In a real implementation, you'd restore to file system
+                                alert(
+                                  `Restored ${restoredItem.name} to ${restoredItem.originalPath}`,
+                                );
+                              }
+                            }}
+                            title="Restore"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Permanently delete ${item.name}? This action cannot be undone.`,
+                                )
+                              ) {
+                                permanentlyDelete(item.id);
+                              }
+                            }}
+                            title="Delete Permanently"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {recycleBinItems.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="text-center text-muted-foreground py-8"
+                      >
+                        Recycle bin is empty
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
           </div>
         );
 
       case "browser":
+        const goBack = () => {
+          if (historyIndex > 0) {
+            const newIndex = historyIndex - 1;
+            setHistoryIndex(newIndex);
+            handleBrowserNavigation(browserHistory[newIndex], false);
+          }
+        };
+
+        const goForward = () => {
+          if (historyIndex < browserHistory.length - 1) {
+            const newIndex = historyIndex + 1;
+            setHistoryIndex(newIndex);
+            handleBrowserNavigation(browserHistory[newIndex], false);
+          }
+        };
+
+        const refreshPage = () => {
+          handleBrowserNavigation(browserUrl, false);
+        };
+
+        const addBookmark = () => {
+          const newBookmark = {
+            id: Date.now().toString(),
+            title: getPageTitle(browserUrl),
+            url: browserUrl,
+          };
+          setBookmarks((prev) => [...prev, newBookmark]);
+        };
+
+        const removeBookmark = (id: string) => {
+          setBookmarks((prev) => prev.filter((b) => b.id !== id));
+        };
+
+        const addNewTab = () => {
+          const newTab = {
+            id: Date.now().toString(),
+            title: "New Tab",
+            url: "https://www.google.com",
+            isActive: false,
+          };
+          setTabs((prev) => [
+            ...prev.map((t) => ({ ...t, isActive: false })),
+            { ...newTab, isActive: true },
+          ]);
+          setActiveTabId(newTab.id);
+          handleBrowserNavigation("https://www.google.com");
+        };
+
+        const closeTab = (tabId: string) => {
+          if (tabs.length === 1) return; // Don't close last tab
+
+          const tabIndex = tabs.findIndex((t) => t.id === tabId);
+          const newTabs = tabs.filter((t) => t.id !== tabId);
+
+          if (tabId === activeTabId) {
+            const newActiveIndex = tabIndex > 0 ? tabIndex - 1 : 0;
+            const newActiveTab = newTabs[newActiveIndex];
+            setActiveTabId(newActiveTab.id);
+            handleBrowserNavigation(newActiveTab.url, false);
+          }
+
+          setTabs(newTabs);
+        };
+
+        const switchTab = (tabId: string) => {
+          const tab = tabs.find((t) => t.id === tabId);
+          if (tab) {
+            setTabs((prev) =>
+              prev.map((t) => ({ ...t, isActive: t.id === tabId })),
+            );
+            setActiveTabId(tabId);
+            handleBrowserNavigation(tab.url, false);
+          }
+        };
+
+        const isBookmarked = bookmarks.some((b) => b.url === browserUrl);
+
         return (
           <div className="h-full flex flex-col bg-white">
-            <div className="flex items-center p-2 border-b bg-gray-50">
-              <div className="flex items-center space-x-2 flex-1">
-                <div className="flex space-x-1">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                </div>
-                <div className="flex-1 mx-4">
-                  <div className="bg-white border rounded-md px-3 py-1 text-sm text-gray-600">
-                    https://www.example.com
+            {/* Tab Bar */}
+            <div className="flex items-center bg-gray-100 border-b">
+              <div className="flex flex-1 overflow-x-auto">
+                {tabs.map((tab) => (
+                  <div
+                    key={tab.id}
+                    className={`flex items-center min-w-0 max-w-48 px-3 py-2 border-r cursor-pointer group ${
+                      tab.isActive
+                        ? "bg-white border-b-2 border-blue-500"
+                        : "hover:bg-gray-200"
+                    }`}
+                    onClick={() => switchTab(tab.id)}
+                  >
+                    <Globe className="h-3 w-3 mr-2 flex-shrink-0" />
+                    <span className="text-xs truncate flex-1">{tab.title}</span>
+                    {tabs.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 ml-1 opacity-0 group-hover:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          closeTab(tab.id);
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
-                </div>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="px-2 py-1 text-xs"
+                  onClick={addNewTab}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
               </div>
             </div>
-            <div className="flex-1 bg-white flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-6xl mb-4">🌐</div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                  WebOS Browser
-                </h2>
-                <p className="text-gray-600">A simple web browser interface</p>
-                <div className="mt-6 space-y-2">
-                  <div className="bg-blue-50 p-3 rounded-lg">
-                    <h3 className="font-medium text-blue-800">Quick Links</h3>
-                    <div className="mt-2 space-x-4 text-sm">
-                      <a href="#" className="text-blue-600 hover:underline">
-                        Search
-                      </a>
-                      <a href="#" className="text-blue-600 hover:underline">
-                        News
-                      </a>
-                      <a href="#" className="text-blue-600 hover:underline">
-                        Weather
-                      </a>
-                      <a href="#" className="text-blue-600 hover:underline">
-                        Mail
-                      </a>
+
+            {/* Navigation Bar */}
+            <div className="flex items-center p-2 border-b bg-gray-50">
+              <div className="flex items-center space-x-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={goBack}
+                  disabled={historyIndex === 0}
+                  title="Back"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={goForward}
+                  disabled={historyIndex >= browserHistory.length - 1}
+                  title="Forward"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={refreshPage}
+                  title="Refresh"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                  />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    handleBrowserNavigation("https://www.google.com")
+                  }
+                  title="Home"
+                >
+                  <Home className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="flex-1 mx-4 flex items-center space-x-2">
+                <div className="flex items-center flex-1 bg-white border rounded-full px-3 py-1">
+                  {browserUrl.startsWith("https://") ? (
+                    <Lock className="h-3 w-3 text-green-600 mr-2" />
+                  ) : (
+                    <Shield className="h-3 w-3 text-gray-400 mr-2" />
+                  )}
+                  <Input
+                    className="flex-1 text-sm border-none focus-visible:ring-0 px-0"
+                    value={browserUrl}
+                    onChange={(e) => setBrowserUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleBrowserNavigation(browserUrl);
+                      }
+                    }}
+                    placeholder="Search Google or type a URL"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => handleBrowserNavigation(browserUrl)}
+                  >
+                    <Search className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={
+                    isBookmarked
+                      ? () =>
+                          removeBookmark(
+                            bookmarks.find((b) => b.url === browserUrl)?.id ||
+                              "",
+                          )
+                      : addBookmark
+                  }
+                  title={isBookmarked ? "Remove bookmark" : "Add bookmark"}
+                >
+                  <Star
+                    className={`h-4 w-4 ${isBookmarked ? "fill-yellow-400 text-yellow-400" : ""}`}
+                  />
+                </Button>
+
+                <Popover open={showBookmarks} onOpenChange={setShowBookmarks}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" title="Bookmarks">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-2" align="end">
+                    <Tabs defaultValue="bookmarks" className="w-full">
+                      <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="bookmarks">Bookmarks</TabsTrigger>
+                        <TabsTrigger value="history">History</TabsTrigger>
+                        <TabsTrigger value="downloads">Downloads</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="bookmarks" className="space-y-2 mt-2">
+                        <div className="text-sm font-medium">Bookmarks</div>
+                        {bookmarks.length === 0 ? (
+                          <div className="text-xs text-muted-foreground py-4 text-center">
+                            No bookmarks yet
+                          </div>
+                        ) : (
+                          <div className="space-y-1 max-h-48 overflow-y-auto">
+                            {bookmarks.map((bookmark) => (
+                              <div
+                                key={bookmark.id}
+                                className="flex items-center justify-between p-2 hover:bg-gray-100 rounded"
+                              >
+                                <div
+                                  className="flex-1 cursor-pointer"
+                                  onClick={() => {
+                                    handleBrowserNavigation(bookmark.url);
+                                    setShowBookmarks(false);
+                                  }}
+                                >
+                                  <div className="text-xs font-medium truncate">
+                                    {bookmark.title}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground truncate">
+                                    {bookmark.url}
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => removeBookmark(bookmark.id)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </TabsContent>
+                      <TabsContent value="history" className="space-y-2 mt-2">
+                        <div className="text-sm font-medium">History</div>
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {browserHistory
+                            .slice()
+                            .reverse()
+                            .map((url, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center p-2 hover:bg-gray-100 rounded cursor-pointer"
+                                onClick={() => {
+                                  handleBrowserNavigation(url);
+                                  setShowBookmarks(false);
+                                }}
+                              >
+                                <History className="h-3 w-3 mr-2" />
+                                <div className="flex-1">
+                                  <div className="text-xs font-medium truncate">
+                                    {getPageTitle(url)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground truncate">
+                                    {url}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="downloads" className="space-y-2 mt-2">
+                        <div className="text-sm font-medium">Downloads</div>
+                        <div className="text-xs text-muted-foreground py-4 text-center">
+                          No downloads yet
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  </PopoverContent>
+                </Popover>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (windowId) {
+                      maximizeWindow(windowId);
+                    }
+                  }}
+                  title="Full Screen"
+                >
+                  <Maximize className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 bg-white overflow-auto">
+              {browserContent ? (
+                <div dangerouslySetInnerHTML={{ __html: browserContent }} />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="text-6xl mb-4">🌐</div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                      WebOS Browser
+                    </h2>
+                    <p className="text-gray-600 mb-6">
+                      Enter a URL to browse the web
+                    </p>
+                    <div className="space-y-2">
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <h3 className="font-medium text-blue-800 mb-2">
+                          Quick Links
+                        </h3>
+                        <div className="space-x-4 text-sm">
+                          <button
+                            onClick={() =>
+                              handleBrowserNavigation("google.com")
+                            }
+                            className="text-blue-600 hover:underline"
+                          >
+                            Google
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleBrowserNavigation("github.com")
+                            }
+                            className="text-blue-600 hover:underline"
+                          >
+                            GitHub
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleBrowserNavigation("youtube.com")
+                            }
+                            className="text-blue-600 hover:underline"
+                          >
+                            YouTube
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleBrowserNavigation("twitter.com")
+                            }
+                            className="text-blue-600 hover:underline"
+                          >
+                            Twitter
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         );

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useRecycleBinStore } from "./recycleBinStore";
 
 export interface FileSystemItem {
   id: string;
@@ -144,18 +145,23 @@ export const useFileSystemStore = create<FileSystemState>()(
       },
 
       deleteItem: (id) => {
-        set((state) => ({
-          items: state.items.filter((item) => {
-            // Delete the item and all its children
-            const itemToDelete = state.items.find((i) => i.id === id);
-            if (!itemToDelete) return true;
+        set((state) => {
+          const itemToDelete = state.items.find((i) => i.id === id);
+          if (!itemToDelete) return state;
 
-            return !item.path.startsWith(itemToDelete.path);
-          }),
-          selectedItems: state.selectedItems.filter(
-            (selectedId) => selectedId !== id,
-          ),
-        }));
+          // Add to recycle bin
+          const { addToRecycleBin } = useRecycleBinStore.getState();
+          addToRecycleBin(itemToDelete);
+
+          return {
+            items: state.items.filter((item) => {
+              return !item.path.startsWith(itemToDelete.path);
+            }),
+            selectedItems: state.selectedItems.filter(
+              (selectedId) => selectedId !== id,
+            ),
+          };
+        });
       },
 
       renameItem: (id, newName) => {
